@@ -2,13 +2,16 @@ from controller import PDController, ServoController
 from tracker import BallTracker
 
 
+GPIO_PIN_X = 18
+GPIO_PIN_Y = 19
+
 tracker = BallTracker()
 tracker.start()
 
-controller = PDController(kp=1.0, kd=0.1)
+controller = PDController(kp_x=0.1, kd_x=0.1, kp_y=0.1, kd_y=0.1)
 controller.set_desired_position((0, 0))  # Set desired position to (0, 0)
 
-servo = ServoController(pin_x=18, pin_y=19)
+servo = ServoController(pin_x=GPIO_PIN_X, pin_y=GPIO_PIN_Y)
 
 while True:
     tracker.process_frame()

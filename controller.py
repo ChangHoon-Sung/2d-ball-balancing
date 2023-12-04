@@ -1,7 +1,8 @@
+import os
 import time
 from typing import Tuple
 
-import RPi.GPIO as GPIO
+import pigpio  # sudo apt-get install python3-pigpio && sudo pigpiod
 
 
 class PDController:
@@ -46,34 +47,45 @@ class PDController:
 
 class ServoController:
     def __init__(self, pin_x: int = 17, pin_y: int = 18):
-        self.FREQENCY = 50      # Hz
-        self.LOW_POS = 3        # 3% duty cycle
-        self.LEVEL_POS_X = 7    # 7% duty cycle
-        self.LEVEL_POS_Y = 7    # 7% duty cycle
-        self.HIGH_POS = 11      # 11% duty cycle
+        # run sudo pigpiod to start the pigpio daemon
+        os.system("sudo pigpiod")
+
+        self.FREQENCY = 50  # Hz
+        self.LOW_POS = 600
+        self.LEVEL_POS_X = 1500
+        self.LEVEL_POS_Y = 1500
+        self.HIGH_POS = 2400
 
         self.pin_x = pin_x
         self.pin_y = pin_y
 
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.pin_x, GPIO.OUT)
-        GPIO.setup(self.pin_y, GPIO.OUT)
+        self.pwm = pigpio.pi()
 
-        self.pwm_x = GPIO.PWM(self.pin_x, self.FREQENCY)
-        self.pwm_y = GPIO.PWM(self.pin_y, self.FREQENCY)
+        self.pwm.set_mode(self.pin_x, pigpio.OUTPUT)
+        self.pwm.set_mode(self.pin_y, pigpio.OUTPUT)
 
-        self.pwm_x.start(self.LEVEL_POS_X)
-        self.pwm_y.start(self.LEVEL_POS_Y)
+        self.pwm.set_PWM_frequency(self.pin_x, self.FREQENCY)
+        self.pwm.set_PWM_frequency(self.pin_y, self.FREQENCY)
+
+        self.pwm.set_servo_pulsewidth(self.pin_x, self.LEVEL_POS_X)
+        self.pwm.set_servo_pulsewidth(self.pin_y, self.LEVEL_POS_Y)
+
+    def __del__(self):
+        self.cleanup()
 
     def set_angle(self, angle_x: float, angle_y: float):
-        duty_x = angle_x / 18 + 2
-        duty_y = angle_y / 18 + 2
+        duty_x = self.LOW_POS + angle_x * 10
+        duty_y = self.LOW_POS + angle_y * 10
 
         duty_x = max(self.LOW_POS, min(self.HIGH_POS, duty_x))
         duty_y = max(self.LOW_POS, min(self.HIGH_POS, duty_y))
-        
+
         self.pwm_x.ChangeDutyCycle(duty_x)
         self.pwm_y.ChangeDutyCycle(duty_y)
 
     def cleanup(self):
-        GPIO.cleanup()
+        self.pwm.set_servo_pulsewidth(self.pin_x, 0)
+        self.pwm.set_servo_pulsewidth(self.pin_y, 0)
+
+        # stop the pigpio daemon
+        os.system("sudo killall pigpiod")

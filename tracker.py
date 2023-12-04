@@ -14,7 +14,13 @@ class BallTracker:
         self.buffer_size = buffer_size
         self.vs = None
         self.pts = deque(maxlen=self.buffer_size)
+
         self.position = None
+        self.target_position = None
+
+        self.window_size = 300
+        self.x_pos = 0
+        self.y_pos = 0
 
     def __del__(self):
         self.stop()
@@ -38,7 +44,11 @@ class BallTracker:
         frame = frame[1] if self.video_path else frame
         if frame is None:
             return
-        frame = imutils.resize(frame, width=420)
+        frame = imutils.resize(frame, height=self.window_size+100)
+        frame = frame[
+            self.x_pos : self.x_pos + self.window_size,
+            self.y_pos : self.y_pos + self.window_size,
+        ]
         blurred = cv2.GaussianBlur(frame, (11, 11), 0)
         rgb = blurred
         mask = cv2.inRange(rgb, RGB.WHITELOWER, RGB.WHITE)
@@ -55,13 +65,26 @@ class BallTracker:
             if radius > 10:
                 cv2.circle(frame, (int(x), int(y)), int(radius), RGB.YELLOW, 1)
                 cv2.circle(frame, self.position, 5, RGB.RED, -1)
+            if self.target_position:
+                cv2.circle(frame, self.target_position, 5, RGB.BLUE, -1)
         self.pts.appendleft(self.position)
         cv2.imshow("Frame", frame)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             self.stop()
+        # elif cv2.waitKey(1) & 0xFF == ord("h"):
+        #     self.x_pos = min(self.x_pos - 10, 0)
+        # elif cv2.waitKey(1) & 0xFF == ord("j"):
+        #     self.y_pos = min(self.y_pos - 10, 0)
+        # elif cv2.waitKey(1) & 0xFF == ord("k"):
+        #     self.y_pos = self.y_pos + 10
+        # elif cv2.waitKey(1) & 0xFF == ord("l"):
+        #     self.x_pos = self.x_pos + 10
 
     def get_position(self):
         return self.position
+
+    def set_target_position(self, position):
+        self.target_position = position
 
 
 if __name__ == "__main__":

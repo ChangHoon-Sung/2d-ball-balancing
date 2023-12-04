@@ -45,29 +45,35 @@ class PDController:
 
 
 class ServoController:
-    def __init__(self, pin_x: int, pin_y: int):
+    def __init__(self, pin_x: int = 17, pin_y: int = 18):
+        self.FREQENCY = 50      # Hz
+        self.LOW_POS = 3        # 3% duty cycle
+        self.LEVEL_POS_X = 7    # 7% duty cycle
+        self.LEVEL_POS_Y = 7    # 7% duty cycle
+        self.HIGH_POS = 11      # 11% duty cycle
+
         self.pin_x = pin_x
         self.pin_y = pin_y
-        GPIO.setmode(GPIO.BOARD)
+
+        GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.pin_x, GPIO.OUT)
         GPIO.setup(self.pin_y, GPIO.OUT)
-        self.pwm_x = GPIO.PWM(self.pin_x, 50)
-        self.pwm_y = GPIO.PWM(self.pin_y, 50)
-        self.pwm_x.start(0)
-        self.pwm_y.start(0)
+
+        self.pwm_x = GPIO.PWM(self.pin_x, self.FREQENCY)
+        self.pwm_y = GPIO.PWM(self.pin_y, self.FREQENCY)
+
+        self.pwm_x.start(self.LEVEL_POS_X)
+        self.pwm_y.start(self.LEVEL_POS_Y)
 
     def set_angle(self, angle_x: float, angle_y: float):
         duty_x = angle_x / 18 + 2
         duty_y = angle_y / 18 + 2
-        GPIO.output(self.pin_x, True)
-        GPIO.output(self.pin_y, True)
+
+        duty_x = max(self.LOW_POS, min(self.HIGH_POS, duty_x))
+        duty_y = max(self.LOW_POS, min(self.HIGH_POS, duty_y))
+        
         self.pwm_x.ChangeDutyCycle(duty_x)
         self.pwm_y.ChangeDutyCycle(duty_y)
-        time.sleep(1)
-        GPIO.output(self.pin_x, False)
-        GPIO.output(self.pin_y, False)
-        self.pwm_x.ChangeDutyCycle(0)
-        self.pwm_y.ChangeDutyCycle(0)
 
     def cleanup(self):
         GPIO.cleanup()

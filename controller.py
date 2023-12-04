@@ -5,9 +5,11 @@ import RPi.GPIO as GPIO
 
 
 class PDController:
-    def __init__(self, kp: float, kd: float):
-        self.kp: float = kp
-        self.kd: float = kd
+    def __init__(self, kp_x: float, kd_x: float, kp_y: float, kd_y: float):
+        self.kp_x: float = kp_x
+        self.kd_x: float = kd_x
+        self.kp_y: float = kp_y
+        self.kd_y: float = kd_y
         self.desired_position: Tuple[float, float] = (None, None)
         self.current_position: Tuple[float, float] = (None, None)
         self.previous_error: Tuple[float, float] = (None, None)
@@ -18,19 +20,23 @@ class PDController:
 
     def update(self, position: Tuple[float, float]):
         self.current_position = position
+
         if None in self.desired_position or None in self.current_position:
             return
+
         error_x = self.desired_position[0] - self.current_position[0]
         error_y = self.desired_position[1] - self.current_position[1]
+
         if None in self.previous_error:
             derivative_x = 0
             derivative_y = 0
         else:
             derivative_x = error_x - self.previous_error[0]
             derivative_y = error_y - self.previous_error[1]
+
         self.output = (
-            self.kp * error_x + self.kd * derivative_x,
-            self.kp * error_y + self.kd * derivative_y,
+            self.kp_x * error_x + self.kd_x * derivative_x,
+            self.kp_y * error_y + self.kd_y * derivative_y,
         )
         self.previous_error = (error_x, error_y)
 

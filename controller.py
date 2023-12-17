@@ -2,6 +2,8 @@ import os
 from typing import Tuple
 
 import pigpio  # sudo apt-get install python3-pigpio && pip3 install pigpio
+
+
 class PDController:
     def __init__(self, kp_x: float, kd_x: float, kp_y: float, kd_y: float):
         self.kp_x: float = kp_x
@@ -47,17 +49,20 @@ class ServoController:
         # run sudo pigpiod to start the pigpio daemon
         # os.system("sudo pigpiod")
 
-        self.FREQENCY = 50      # Hz
-        self.LOW_POS = 600      # 0 degrees
-        self.HIGH_POS = 2400    # 180 degrees
+        self.FREQENCY = 50  # Hz
+        self.LOW_POS = 600  # 0 degrees
+        self.HIGH_POS = 2400  # 180 degrees
+
+        self.LEVEL_POS_X = 1500  # 90 degrees
+        self.LEVEL_POS_Y = 1500  # 90 degrees
 
         if os.path.exists("calibration.txt"):
             with open("calibration.txt", "r") as f:
-                self.LEVEL_POS_X = self.LOW_POS + float(f.readline().strip()) * 10
-                self.LEVEL_POS_Y = self.LOW_POS + float(f.readline().strip()) * 10
-        else:
-            self.LEVEL_POS_X = 1500 # 90 degrees
-            self.LEVEL_POS_Y = 1500 # 90 degrees
+                line = f.readline()
+                if line:
+                    angle_x, angle_y, *_ = line.strip().split(", ")
+                    self.LEVEL_POS_X = self.LOW_POS + float(angle_x) * 10
+                    self.LEVEL_POS_Y = self.LOW_POS + float(angle_y) * 10
 
         self.pin_x = pin_x
         self.pin_y = pin_y
@@ -131,11 +136,19 @@ if __name__ == "__main__":
 
     print("Do you want to save these values? (y/N)")
     yn = input().strip()
-    if yn not in ["y", "Y", "yes", "Yes", "YES"]:
-        print("Exiting...")
-        exit()
-    else:
-        with open("calibration.txt", "w") as f:
-            f.write(str(angle_x) + "\n")
-            f.write(str(angle_y) + "\n")
+    if yn in ["y", "Y", "yes", "Yes", "YES"]:
+        if not os.path.exists("calibration.txt"):
+            with open("calibration.txt", "w") as f:
+                f.write(f"{str(angle_x)}, {str(angle_y)}, 100, 100, 0")
+
+        else:
+            lines = None
+            with open("calibration.txt", "r") as f:
+                lines = f.readline().strip().split(", ")
+            with open("calibration.txt", "w") as f:
+                f.write(
+                    f"{str(angle_x)}, {str(angle_y)}, {lines[2]}, {lines[3]}, {lines[4]}"
+                )
         print("Saved to calibration.txt")
+    else:
+        print("Exiting...")

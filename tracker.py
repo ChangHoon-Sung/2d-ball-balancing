@@ -1,3 +1,4 @@
+import os
 import time
 from collections import deque
 
@@ -18,9 +19,18 @@ class BallTracker:
         self.position = None
         self.target_position = None
 
-        self.window_size = 300
-        self.x_pos = 0
-        self.y_pos = 0
+        self.window_size = 320
+        self.x_pos = 100
+        self.y_pos = 100
+        self.angle = 0
+
+        if os.path.exists("calibration.txt"):
+            with open("calibration.txt", "r") as f:
+                line = f.readline()
+                _, _, x_pos, y_pos, angle = line.strip().split(", ")
+                self.x_pos = int(x_pos)
+                self.y_pos = int(y_pos)
+                self.angle = int(angle)
 
     def __del__(self):
         self.stop()
@@ -38,16 +48,25 @@ class BallTracker:
         else:
             self.vs.release()
         cv2.destroyAllWindows()
+    
+    def cap(self, pos: int):
+        if pos < 0:
+            return 0
+        elif pos > 120:
+            return 300
+        else:
+            return pos
 
     def process_frame(self):
         frame = self.vs.read()
         frame = frame[1] if self.video_path else frame
         if frame is None:
             return
-        frame = imutils.resize(frame, height=self.window_size+100)
+        frame = imutils.resize(frame, height=400)
+        frame = imutils.rotate_bound(frame, self.angle)
         frame = frame[
-            self.x_pos : self.x_pos + self.window_size,
             self.y_pos : self.y_pos + self.window_size,
+            self.x_pos : self.x_pos + self.window_size,
         ]
         blurred = cv2.GaussianBlur(frame, (11, 11), 0)
         rgb = blurred
@@ -64,21 +83,34 @@ class BallTracker:
                 return
             if radius > 10:
                 cv2.circle(frame, (int(x), int(y)), int(radius), RGB.YELLOW, 1)
-                cv2.circle(frame, self.position, 5, RGB.RED, -1)
+                cv2.circle(frame, self.position, 2, RGB.RED, -1)
             if self.target_position:
-                cv2.circle(frame, self.target_position, 5, RGB.BLUE, -1)
+                cv2.circle(frame, self.target_position, 2, RGB.BLUE, -1)
+            
+            # draw blue square 300 by 300
+            cv2.rectangle(frame, (20, 20), (300, 300), RGB.BLUE, 2)
         self.pts.appendleft(self.position)
         cv2.imshow("Frame", frame)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+       
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord("q"):
             self.stop()
-        # elif cv2.waitKey(1) & 0xFF == ord("h"):
-        #     self.x_pos = min(self.x_pos - 10, 0)
-        # elif cv2.waitKey(1) & 0xFF == ord("j"):
-        #     self.y_pos = min(self.y_pos - 10, 0)
-        # elif cv2.waitKey(1) & 0xFF == ord("k"):
-        #     self.y_pos = self.y_pos + 10
-        # elif cv2.waitKey(1) & 0xFF == ord("l"):
-        #     self.x_pos = self.x_pos + 10
+        elif key == ord("h"):
+            self.x_pos = self.cap(self.x_pos - 5)
+        elif key == ord("j"):
+            self.y_pos = self.cap(self.y_pos + 5)
+        elif key == ord("k"):
+            self.y_pos = self.cap(self.y_pos - 5)
+        elif key == ord("l"):
+            self.x_pos = self.cap(self.x_pos + 5)
+        elif key == ord("="):
+            self.window_size = self.window_size + 5
+        elif key == ord("-"):
+            self.window_size = self.window_size - 5
+        elif key == ord("r"):
+            self.angle = self.angle + 1
+        elif key == ord("t"):
+            self.angle = self.angle - 1
 
     def get_position(self):
         return self.position
@@ -90,12 +122,33 @@ class BallTracker:
 if __name__ == "__main__":
     tracker = BallTracker()
     tracker.start()
-    while True:
-        start_time = time.time()
-        tracker.process_frame()
-        end_time = time.time()
 
-        fps = 1 / (end_time - start_time)
-        position = tracker.get_position()
-        if position:
-            print(f"x: {position[0]}, y: {position[1]}, fps: {fps:.2f}")
+    try:
+        while True:
+            start_time = time.time()
+            tracker.process_frame()
+            end_time = time.time()
+
+            fps = 1 / (end_time - start_time)
+            position = tracker.get_position()
+            if position:
+                print(f"x: {position[0]}, y: {position[1]}, wx: {tracker.x_pos}, wy: {tracker.y_pos}, fps: {fps:.2f}")
+    except KeyboardInterrupt:
+        tracker.stop()
+
+        print("Calibration")
+        print(f"x: {tracker.x_pos}, y: {tracker.y_pos}, angle: {tracker.angle}")
+
+        yn = input("Save? (y/N): ")
+        if yn in ["y", "Y"]:
+            if not os.path.exists("calibration.txt"):
+                with open("calibration.txt", "w") as f:
+                    f.write(f"90, 90, {tracker.x_pos}, {tracker.y_pos}, {tracker.angle}")
+
+            else:
+                with open("calibration.txt", "r") as f:
+                    lines = f.readline().strip().split(", ")
+                with open("calibration.txt", "w") as f:
+                    f.write(f"{lines[0]}, {lines[1]}, {tracker.x_pos}, {tracker.y_pos}, {tracker.angle}")
+        else:
+            print("Exiting...")

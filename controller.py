@@ -1,10 +1,7 @@
 import os
-import time
 from typing import Tuple
 
-import pigpio  # sudo apt-get install python3-pigpio && sudo pigpiod
-
-
+import pigpio  # sudo apt-get install python3-pigpio && pip3 install pigpio
 class PDController:
     def __init__(self, kp_x: float, kd_x: float, kp_y: float, kd_y: float):
         self.kp_x: float = kp_x
@@ -48,13 +45,19 @@ class PDController:
 class ServoController:
     def __init__(self, pin_x: int = 17, pin_y: int = 18):
         # run sudo pigpiod to start the pigpio daemon
-        os.system("sudo pigpiod")
+        # os.system("sudo pigpiod")
 
-        self.FREQENCY = 50  # Hz
-        self.LOW_POS = 600
-        self.LEVEL_POS_X = 1500
-        self.LEVEL_POS_Y = 1500
-        self.HIGH_POS = 2400
+        self.FREQENCY = 50      # Hz
+        self.LOW_POS = 600      # 0 degrees
+        self.HIGH_POS = 2400    # 180 degrees
+
+        if os.path.exists("calibration.txt"):
+            with open("calibration.txt", "r") as f:
+                self.LEVEL_POS_X = self.LOW_POS + float(f.readline().strip()) * 10
+                self.LEVEL_POS_Y = self.LOW_POS + float(f.readline().strip()) * 10
+        else:
+            self.LEVEL_POS_X = 1500 # 90 degrees
+            self.LEVEL_POS_Y = 1500 # 90 degrees
 
         self.pin_x = pin_x
         self.pin_y = pin_y
@@ -73,19 +76,66 @@ class ServoController:
     def __del__(self):
         self.cleanup()
 
-    def set_angle(self, angle_x: float, angle_y: float):
-        duty_x = self.LOW_POS + angle_x * 10
-        duty_y = self.LOW_POS + angle_y * 10
+    def set_angle(self, angle: float, pin: int):
+        if type(angle) != float and type(angle) != int:
+            print("Warning: Angle must be a float or int")
+            return
 
-        duty_x = max(self.LOW_POS, min(self.HIGH_POS, duty_x))
-        duty_y = max(self.LOW_POS, min(self.HIGH_POS, duty_y))
+        # angle to pulsewidth
+        pulsewidth = self.LOW_POS + angle * 10
 
-        self.pwm_x.ChangeDutyCycle(duty_x)
-        self.pwm_y.ChangeDutyCycle(duty_y)
+        # limit cap
+        pulsewidth = max(self.LOW_POS, min(self.HIGH_POS, pulsewidth))
+
+        # actuate
+        self.pwm.set_servo_pulsewidth(pin, pulsewidth)
 
     def cleanup(self):
-        self.pwm.set_servo_pulsewidth(self.pin_x, 0)
-        self.pwm.set_servo_pulsewidth(self.pin_y, 0)
+        # os.system("sudo killall pigpiod")
+        return
 
-        # stop the pigpio daemon
-        os.system("sudo killall pigpiod")
+
+if __name__ == "__main__":
+    controller = ServoController()
+
+    servo_x = 17
+    servo_y = 18
+
+    angle_x = None
+    angle_y = None
+
+    # user input
+    while True:
+        try:
+            angle_y = int(input("Enter angle for servo y: "))
+            controller.set_angle(angle_y, servo_y)
+        except KeyboardInterrupt:
+            print()
+            break
+
+    while True:
+        try:
+            angle_x = int(input("Enter angle for servo x: "))
+            controller.set_angle(angle_x, servo_x)
+        except KeyboardInterrupt:
+            print()
+            break
+
+    if angle_x > 180 or angle_x < 0 or angle_y > 180 or angle_y < 0:
+        print("Error: Invalid angle")
+        exit()
+
+    print("Calibration complete.")
+    print("angle_x: ", angle_x)
+    print("angle_y: ", angle_y)
+
+    print("Do you want to save these values? (y/N)")
+    yn = input().strip()
+    if yn not in ["y", "Y", "yes", "Yes", "YES"]:
+        print("Exiting...")
+        exit()
+    else:
+        with open("calibration.txt", "w") as f:
+            f.write(str(angle_x) + "\n")
+            f.write(str(angle_y) + "\n")
+        print("Saved to calibration.txt")

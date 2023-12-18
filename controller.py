@@ -104,7 +104,7 @@ class ServoController:
             return
 
         # angle to pulsewidth
-        pulsewidth = self.LOW_POS + angle * 10
+        pulsewidth = self.LOW_POS + angle
 
         # limit cap
         pulsewidth = max(self.LOW_POS, min(self.HIGH_POS, pulsewidth))

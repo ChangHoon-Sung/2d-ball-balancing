@@ -7,6 +7,15 @@ from tracker import BallTracker
 GPIO_PIN_X = 17
 GPIO_PIN_Y = 18
 
+
+# Calibration
+with open("calibration.txt", "r") as f:
+    line = f.readline()
+    OFFSET_X, OFFSET_Y, *_ = line.strip().split(", ")
+    OFFSET_X = float(OFFSET_X) * 10
+    OFFSET_Y = float(OFFSET_Y) * 10
+
+
 # Center
 # freq = 1; target_position = [[170, 170]]
 
@@ -18,10 +27,7 @@ freq = 4; target_position = [[120, 120],[220,120],[220,220],[120,220]]
 
 tracker = BallTracker()
 tracker.start()
-
-pd_ctl = PIDController(kp_x=0.5, ki_x=0, kd_x=7, kp_y=0.5, ki_y=0, kd_y=7)
-pd_ctl.set_desired_position(target_position)
-
+pd_ctl = PIDController(kp_x=8, ki_x=0.000, kd_x=140, kp_y=8, ki_y=0.000, kd_y=140)
 servo_ctl = ServoController(pin_x=GPIO_PIN_X, pin_y=GPIO_PIN_Y)
 
 t = time()
@@ -43,7 +49,7 @@ while True:
         continue
 
     print(f"tgt: {target_position[pos_idx]}, pos: {position}, fps: {1/(time()-now):.2f}, out: {output}")
-    servo_ctl.set_angle(GPIO_PIN_X, output[0] + 90)
-    servo_ctl.set_angle(GPIO_PIN_Y, output[1] + 90)
+    servo_ctl.set_angle(GPIO_PIN_X, output[0] + OFFSET_X)
+    servo_ctl.set_angle(GPIO_PIN_Y, output[1] + OFFSET_Y)
 
 servo_ctl.cleanup()

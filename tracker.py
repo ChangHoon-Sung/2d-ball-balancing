@@ -52,8 +52,8 @@ class BallTracker:
     def cap(self, pos: int):
         if pos < 0:
             return 0
-        elif pos > 120:
-            return 300
+        elif pos > 200:
+            return 200
         else:
             return pos
 
@@ -63,6 +63,7 @@ class BallTracker:
         if frame is None:
             return
         frame = imutils.resize(frame, height=400)
+        frame = imutils.rotate_bound(frame, -90)
         frame = imutils.rotate_bound(frame, self.angle)
         frame = frame[
             self.y_pos : self.y_pos + self.window_size,
@@ -88,7 +89,8 @@ class BallTracker:
                 cv2.circle(frame, self.target_position, 2, RGB.BLUE, -1)
             
             # draw blue square 300 by 300
-            cv2.rectangle(frame, (20, 20), (300, 300), RGB.BLUE, 2)
+            cv2.rectangle(frame, (20, 20), (320, 320), RGB.BLUE, 2)
+            cv2.circle(frame, (170, 170), 1, RGB.BLUE, 2)
         self.pts.appendleft(self.position)
         cv2.imshow("Frame", frame)
        

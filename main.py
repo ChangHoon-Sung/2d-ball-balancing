@@ -1,26 +1,32 @@
-from controller import PDController, ServoController
+from controller import PIDController, ServoController
 from tracker import BallTracker
 
 
-GPIO_PIN_X = 18
-GPIO_PIN_Y = 19
+GPIO_PIN_X = 17
+GPIO_PIN_Y = 18
+
+target_position = (170, 150)
 
 tracker = BallTracker()
 tracker.start()
 
-controller = PDController(kp_x=0.1, kd_x=0.1, kp_y=0.1, kd_y=0.1)
-controller.set_desired_position((0, 0))  # Set desired position to (0, 0)
+pd_ctl = PIDController(kp_x=0.5, ki_x=0, kd_x=7, kp_y=0.5, ki_y=0, kd_y=7)
+pd_ctl.set_desired_position(target_position)
 
-servo = ServoController(pin_x=GPIO_PIN_X, pin_y=GPIO_PIN_Y)
+servo_ctl = ServoController(pin_x=GPIO_PIN_X, pin_y=GPIO_PIN_Y)
 
 while True:
     tracker.process_frame()
     position = tracker.get_position()
     if position is None:
         continue
-    controller.update(position)  # Update controller with position
-    output = controller.get_output()
+    pd_ctl.update(position)  # Update controller with position
+    output = pd_ctl.get_output()
     if output is None:
         continue
-    servo.set_angle(output[0], output[1])  # Set servo angles based on controller output
-servo.cleanup()
+
+    print(f"tgt: {target_position}, pos: {position}, out: {output}")
+    servo_ctl.set_angle(GPIO_PIN_X, output[0] + 90)
+    servo_ctl.set_angle(GPIO_PIN_Y, output[1] + 90)
+
+servo_ctl.cleanup()

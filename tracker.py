@@ -86,8 +86,8 @@ class BallTracker:
                 cv2.circle(frame, (int(x), int(y)), int(radius), RGB.YELLOW, 1)
                 cv2.circle(frame, self.position, 2, RGB.RED, -1)
             if self.target_position:
-                cv2.circle(frame, self.target_position, 2, RGB.BLUE, -1)
-            
+                cv2.circle(frame, self.target_position, 2, RGB.GREEN, -1)
+
             # draw blue square 300 by 300
             cv2.rectangle(frame, (20, 20), (320, 320), RGB.BLUE, 2)
             cv2.circle(frame, (170, 170), 1, RGB.BLUE, 2)

@@ -1,34 +1,42 @@
 import os
-from typing import Tuple
+from typing import List
 
 import pigpio  # sudo apt-get install python3-pigpio && pip3 install pigpio
 
 
 class PIDController:
-    def __init__(self, kp_x: float, kd_x: float, ki_x: float, kp_y: float, kd_y: float, ki_y: float):
+    def __init__(
+        self,
+        kp_x: float,
+        kd_x: float,
+        ki_x: float,
+        kp_y: float,
+        kd_y: float,
+        ki_y: float,
+    ):
         self.kp_x: float = kp_x
         self.kd_x: float = kd_x
         self.ki_x: float = ki_x
         self.kp_y: float = kp_y
         self.kd_y: float = kd_y
         self.ki_y: float = ki_y
-        self.desired_position: Tuple[float, float] = (None, None)
-        self.current_position: Tuple[float, float] = (None, None)
-        self.previous_error: Tuple[float, float] = (None, None)
-        self.integral: Tuple[float, float] = (0, 0)
-        self.output: Tuple[float, float] = (None, None)
+        self.target_position: List[float] = [None, None]
+        self.current_position: List[float] = [None, None]
+        self.previous_error: List[float] = [None, None]
+        self.integral: List[float] = [0, 0]
+        self.output: List[float] = [None, None]
 
-    def set_desired_position(self, position: Tuple[float, float]):
-        self.desired_position = position
+    def set_target_position(self, position: List[float]):
+        self.target_position = position
 
-    def update(self, position: Tuple[float, float]):
+    def update(self, position: List[float]):
         self.current_position = position
 
-        if None in self.desired_position or None in self.current_position:
+        if None in self.target_position or None in self.current_position:
             return
 
-        error_x = self.desired_position[0] - self.current_position[0]
-        error_y = self.desired_position[1] - self.current_position[1]
+        error_x = self.target_position[0] - self.current_position[0]
+        error_y = self.target_position[1] - self.current_position[1]
 
         if None in self.previous_error:
             derivative_x = 0
@@ -39,13 +47,17 @@ class PIDController:
 
         self.integral = (self.integral[0] + error_x, self.integral[1] + error_y)
 
-        self.output = (
-            self.kp_x * error_x + self.kd_x * derivative_x + self.ki_x * self.integral[0],
-            self.kp_y * error_y + self.kd_y * derivative_y + self.ki_y * self.integral[1],
-        )
+        self.output = [
+            self.kp_x * error_x
+            + self.kd_x * derivative_x
+            + self.ki_x * self.integral[0],
+            self.kp_y * error_y
+            + self.kd_y * derivative_y
+            + self.ki_y * self.integral[1],
+        ]
         self.previous_error = (error_x, error_y)
 
-    def get_output(self) -> Tuple[float, float]:
+    def get_output(self) -> List[float]:
         return self.output
 
 
